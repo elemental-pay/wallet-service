@@ -1,0 +1,16 @@
+version: '3'
+services:
+  zec_rpc_gateway:
+    build: ./packages/zec-rpc-gateway
+    hostname: zec_rpc_gateway
+    env_file:
+    - ./packages/zec-rpc-gateway/.env
+    container_name: zec_rpc_gateway
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - elemental_net
+networks:
+  elemental_net:
+    external: true
+    driver: bridge
