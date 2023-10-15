@@ -128,3 +128,16 @@ dist
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
+
+###
+
+.DS_Store
+target/
+lib/
+native.node
+zingo-wallet.dat
+
+# TMP
+packages/node-zingo-wallet
+packages/zec-rpc/native/
+

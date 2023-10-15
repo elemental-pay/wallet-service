@@ -29,8 +29,7 @@ def rpc():
 
 
 
-
-
+# Mini integration test:
 @api.route('/ping', methods=["GET"])
 def ping():
     container_id = create_container()
@@ -44,6 +43,7 @@ def ping():
 
     response = requests.post(rest_url, json=request_rpc("ping"))
     res = response.json()
+    container.stop()
     
     return jsonify({**res, 'container': container_name})
 
@@ -52,9 +52,29 @@ def get_accounts():
     containers = get_containers_by_label("type", "zec-rpc-server")
     return jsonify({'wallets': containers})
 
+@api.route('/wallets/<address>', methods=['GET'])
+def get_wallet(address):
+    container = get_container_by_label("address", address)
+    if (container is None):
+        return jsonify({'error': 'Wallet not found'})
+
+    wallet_id = container.labels.get("id")
+    
+    return jsonify({'wallet_id': wallet_id })
+# f248ffe8
+@api.route('/wallets/<address>', methods=["DELETE"])
+def delete_wallet(address):
+    container = get_container_by_label("address", address)
+    if (container is None):
+        return jsonify({'error': 'Wallet not found'})
+
+    container.stop()
+
+    return jsonify({'success': True })
+
 @api.route('/rpc/<wallet_id>', methods=['POST'])
 def rpc_wallet(wallet_id):
-    data = request_.get_json()
+    data = request.get_json()
     container_name = f"zec-rpc-{wallet_id}"
     container = get_container_by_label("name", container_name)
     if (container is None):
@@ -75,9 +95,13 @@ def create_account():
     ufvk = data.get('ufvk', None)
 
     if address is None or ufvk is None:
-        return jsonify({'error': 'Name is required'}), 400
+        return jsonify({'error': 'Address or ufvk is missing'}), 400
+    check_container = get_container_by_label("address", address)
+    if (check_container is not None):
+        wallet_id = check_container.labels.get("id")
+        return jsonify({'error': 'Wallet with address already exists', 'code': 'WALLET_EXISTS', 'wallet_id': wallet_id}), 400
 
-    container_id = create_container()
+    container_id = create_container({'address': address})
     container_name = f"zec-rpc-{container_id}"
     container = get_container_by_label("name", container_name)
     if (container is None):
