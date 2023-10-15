@@ -1,4 +1,5 @@
 import deepDiff from 'deep-diff';
+import fetch from 'node-fetch';
 import { isEqual } from 'lodash.isequal';
 import { zingolib_wallet_exists, zingolib_initialize_existing, zingolib_deinitialize, zingolib_initialize_new, zingolib_initialize_new_from_ufvk } from '@elemental-zcash/zingo-node';
 // const  = pkg;
@@ -38,6 +39,22 @@ const setVerificationProgress = () => {
 
 };
 
+// FIXME: Fix this hack, add a binding to get this from lightwalletd server
+const getBlockHeight = async () => {
+  const apiUrl = `https://api.blockchair.com/zcash/blocks?s=id%28desc%29&limit=1&offset=0&page=0`;
+
+  const response = await fetch(apiUrl);
+  if (!response.ok) {
+    throw new Error(`HTTP error! Status: ${response.status}`);
+  }
+  const data = await response.json();
+
+  // Extracting block height from the response
+  const blockHeightFromResponse = (data as any)?.data[0].id;
+
+  return blockHeightFromResponse;
+}
+
 
 export class Wallet {
   state: State = {
@@ -60,7 +77,7 @@ export class Wallet {
     if (ufvk) {
       this.setState({ ufvk });
     }
-    this.initialize();
+    this.initialize(ufvk);
   }
 
   setTransactionList = (transactions: Transaction[]) => {
@@ -84,16 +101,21 @@ export class Wallet {
     }
   }
 
-  async initialize() {
+  async initialize(ufvk) {
     const { url, chain, dataDir } = this.state;
     if (!zingolib_wallet_exists(chain, dataDir)) {
+      console.log('!zingolib_wallet_exists')
       // Show the wallet creation screen
-      if (this.state.ufvk) {
+      if (ufvk || this.state.ufvk) {
         // await this.createNewWalletFromUfvk(this.state.ufvk, /*RPC.fetchWalletHeight()*/ null);
         // const birthday = await RPC.fetchWalletHeight();
         // console.log({ birthday });
-        await this.createNewWalletFromUfvk(this.state.ufvk, 2248991);
+        const blockHeight = await getBlockHeight();
+        console.log('createNewWalletFromUfvk');
+        
+        await this.createNewWalletFromUfvk(ufvk || this.state.ufvk, Number(blockHeight));
       } else {
+        console.log('createNewWallet');
         await this.createNewWallet();
       }
 
@@ -103,6 +125,7 @@ export class Wallet {
   
       this.rpc.configure(rpcConfig);
     } else {
+      console.log('zingolib_wallet_exists');
       const result: string =
         zingolib_initialize_existing(url, chain, dataDir);
       if (result !== "OK") {
@@ -149,7 +172,7 @@ export class Wallet {
       // this.setState({ walletScreen: 2, newWalletError: result });
     } else {
       const seed: string = await RPC.fetchSeed();
-      console.log({ seed });
+      // console.log({ seed });
       // this.setState({ walletScreen: 2, seed });
     }
   };

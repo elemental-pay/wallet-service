@@ -15,7 +15,7 @@ NODE_PID=$!
 
 
 # Sleep for 6 hours (6 * 60 * 60 seconds)
-sleep 6 * 60 * 60
+sleep 21600
 
 # Stop the Node.js server after 6 hours
 stop_server
